@@ -40,6 +40,10 @@ class GoogleDriveService {
     static async getMasterDrive() {
         console.log('[MasterDrive] Initializing Master Drive access...');
         console.log(`[MasterDrive] Using Redirect URI: ${process.env.GOOGLE_REDIRECT_URI}`);
+        
+        const secret = process.env.GOOGLE_CLIENT_SECRET || '';
+        console.log(`[MasterDrive] Secret Check: Length=${secret.length}, Suffix=...${secret.slice(-3)}`);
+        
         if (!process.env.MASTER_REFRESH_TOKEN) {
             console.error('[MasterDrive] CRITICAL: MASTER_REFRESH_TOKEN is missing in Environment Variables!');
             throw new Error('MASTER_REFRESH_TOKEN missing. Generate one via /auth/link.');
