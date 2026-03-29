@@ -17,7 +17,7 @@ class GoogleDriveService {
         return normalized;
     }
 
-    static getOAuth2Client(tokens = null, useRedirect = false) {
+    static async getOAuth2Client(tokens = null, useRedirect = false) {
         const oauth2Client = new google.auth.OAuth2(
             process.env.GOOGLE_CLIENT_ID,
             process.env.GOOGLE_CLIENT_SECRET,
@@ -51,7 +51,7 @@ class GoogleDriveService {
     static async getMasterDrive() {
         logger.debug('Initializing Master Drive access...');
         const masterToken = await ConfigService.getMasterToken();
-        const auth = this.getOAuth2Client(masterToken ? { refresh_token: masterToken } : null, false);
+        const auth = await this.getOAuth2Client(masterToken ? { refresh_token: masterToken } : null, false);
         try {
             await auth.getAccessToken();
             return google.drive({ version: 'v3', auth });
@@ -63,7 +63,7 @@ class GoogleDriveService {
 
     static async getDrive(tokens = null) {
         // General API calls NEVER need a redirect URI
-        const auth = this.getOAuth2Client(tokens, false);
+        const auth = await this.getOAuth2Client(tokens, false);
         try {
             await auth.getAccessToken();
             const credentials = { ...auth.credentials };
