@@ -1,7 +1,6 @@
 const { google } = require('googleapis');
-const dotenv = require('dotenv');
-
-dotenv.config();
+const logger = require('./logger');
+const ConfigService = require('./configService');
 
 class GoogleDriveService {
     static normalizeTokens(tokens) {
@@ -18,56 +17,59 @@ class GoogleDriveService {
         return normalized;
     }
 
-    static getOAuth2Client(tokens = null, useRedirect = false) {
+    static async getOAuth2Client(tokens = null, useRedirect = false) {
         const oauth2Client = new google.auth.OAuth2(
             process.env.GOOGLE_CLIENT_ID,
             process.env.GOOGLE_CLIENT_SECRET,
             useRedirect ? process.env.GOOGLE_REDIRECT_URI : null
         );
 
-        const normalizedTokens = this.normalizeTokens(tokens);
+        let activeTokens = tokens;
+        if (!activeTokens) {
+            const masterToken = await ConfigService.getMasterToken();
+            if (masterToken) {
+                activeTokens = { refresh_token: masterToken };
+            }
+        }
+
+        const normalizedTokens = this.normalizeTokens(activeTokens);
         if (normalizedTokens) {
             oauth2Client.setCredentials(normalizedTokens);
-        } else if (process.env.MASTER_REFRESH_TOKEN) {
-            oauth2Client.setCredentials({
-                refresh_token: process.env.MASTER_REFRESH_TOKEN
-            });
         }
+
+        // Listen for token refreshes
+        oauth2Client.on('tokens', async (newTokens) => {
+            if (newTokens.refresh_token) {
+                logger.info('New Refresh Token received, updating persistence...');
+                await ConfigService.updateMasterToken(newTokens.refresh_token);
+            }
+        });
 
         return oauth2Client;
     }
 
     static async getMasterDrive() {
-        console.log('[MasterDrive] Initializing Master Drive access...');
-        console.log(`[MasterDrive] Using Redirect URI: ${process.env.GOOGLE_REDIRECT_URI}`);
-        
-        const secret = process.env.GOOGLE_CLIENT_SECRET || '';
-        console.log(`[MasterDrive] Secret Check: Length=${secret.length}, Suffix=...${secret.slice(-3)}`);
-        
-        if (!process.env.MASTER_REFRESH_TOKEN) {
-            console.error('[MasterDrive] CRITICAL: MASTER_REFRESH_TOKEN is missing in Environment Variables!');
-            throw new Error('MASTER_REFRESH_TOKEN missing. Generate one via /auth/link.');
+        logger.debug('Initializing Master Drive access...');
+        const masterToken = await ConfigService.getMasterToken();
+        const auth = this.getOAuth2Client(masterToken ? { refresh_token: masterToken } : null, false);
+        try {
+            await auth.getAccessToken();
+            return google.drive({ version: 'v3', auth });
+        } catch (error) {
+            logger.error('Master Drive authorization failed', { error: error.message });
+            throw error;
         }
-
-        console.log(`[MasterDrive] Client ID: ${process.env.GOOGLE_CLIENT_ID?.substring(0, 15)}...`);
-        console.log(`[MasterDrive] Token Start: ${process.env.MASTER_REFRESH_TOKEN?.substring(0, 10)}...`);
-
-        const { drive } = await this.getDrive();
-        console.log('[MasterDrive] Master Drive successfully authorized!');
-        return drive;
     }
 
     static async getDrive(tokens = null) {
-        const auth = this.getOAuth2Client(tokens, false); // Never use redirect for API calls
+        // General API calls NEVER need a redirect URI
+        const auth = this.getOAuth2Client(tokens, false);
         try {
             await auth.getAccessToken();
             const credentials = { ...auth.credentials };
             return { drive: google.drive({ version: 'v3', auth }), credentials };
         } catch (error) {
-            console.error('Google Drive auth error:', error.message || error);
-            if (error.message && error.message.includes('invalid_grant')) {
-                console.error('Refresh token invalid or revoked for provided credentials.');
-            }
+            logger.error('Google Drive auth error', { error: error.message });
             throw error;
         }
     }
@@ -131,3 +133,4 @@ class GoogleDriveService {
 }
 
 module.exports = GoogleDriveService;
+
