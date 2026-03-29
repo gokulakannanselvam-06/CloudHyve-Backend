@@ -1,0 +1,32 @@
+# Dependencies
+node_modules/
+
+# Environment Variables (NEVER commit this!)
+.env
+.env.*
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+
+# Temp files
+tmp/
+*.tmp
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Debug scripts (not needed in production)
+check_schema.js
+diag.js
+exchange_code.js
+exchange_final.js
+exchange_v4.js
+exchange_v5.js
+exchange_v6.js
+generate_master_token.js
+test_auth.js
+test_token.js
+test_token_final.js
