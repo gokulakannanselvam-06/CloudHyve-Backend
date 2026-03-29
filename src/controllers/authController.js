@@ -5,7 +5,7 @@ const fs = require('fs');
 const path = require('path');
 
 exports.googleLogin = (req, res) => {
-    const oauth2Client = GoogleDriveService.getOAuth2Client();
+    const oauth2Client = GoogleDriveService.getOAuth2Client(null, true); // Needs Redirect URI
     const url = oauth2Client.generateAuthUrl({
         access_type: 'offline',
         scope: [
@@ -20,7 +20,7 @@ exports.googleLogin = (req, res) => {
 
 exports.verifyToken = async (req, res) => {
     const { idToken, email, serverAuthCode, forceAccountSync = false } = req.body;
-    const client = GoogleDriveService.getOAuth2Client();
+    const client = GoogleDriveService.getOAuth2Client(null, true); // Needs Redirect URI for getToken
 
     try {
         // 1. Verify the ID token
@@ -109,7 +109,7 @@ exports.getLinkUrl = (req, res) => {
     const { userId } = req.query;
     if (!userId) return res.status(400).send('User ID required');
 
-    const oauth2Client = GoogleDriveService.getOAuth2Client();
+    const oauth2Client = GoogleDriveService.getOAuth2Client(null, true); // Needs Redirect URI
     const url = oauth2Client.generateAuthUrl({
         access_type: 'offline',
         scope: [
@@ -125,7 +125,7 @@ exports.getLinkUrl = (req, res) => {
 
 exports.linkCallback = async (req, res) => {
     const { code, state: userId } = req.query;
-    const client = GoogleDriveService.getOAuth2Client();
+    const client = GoogleDriveService.getOAuth2Client(null, true); // Needs Redirect URI for getToken
 
     try {
         const { tokens } = await client.getToken(code);

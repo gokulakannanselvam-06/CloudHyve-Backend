@@ -18,11 +18,11 @@ class GoogleDriveService {
         return normalized;
     }
 
-    static getOAuth2Client(tokens = null) {
+    static getOAuth2Client(tokens = null, useRedirect = false) {
         const oauth2Client = new google.auth.OAuth2(
             process.env.GOOGLE_CLIENT_ID,
             process.env.GOOGLE_CLIENT_SECRET,
-            process.env.GOOGLE_REDIRECT_URI
+            useRedirect ? process.env.GOOGLE_REDIRECT_URI : null
         );
 
         const normalizedTokens = this.normalizeTokens(tokens);
@@ -39,6 +39,7 @@ class GoogleDriveService {
 
     static async getMasterDrive() {
         console.log('[MasterDrive] Initializing Master Drive access...');
+        console.log(`[MasterDrive] Using Redirect URI: ${process.env.GOOGLE_REDIRECT_URI}`);
         if (!process.env.MASTER_REFRESH_TOKEN) {
             console.error('[MasterDrive] CRITICAL: MASTER_REFRESH_TOKEN is missing in Environment Variables!');
             throw new Error('MASTER_REFRESH_TOKEN missing. Generate one via /auth/link.');
@@ -53,7 +54,7 @@ class GoogleDriveService {
     }
 
     static async getDrive(tokens = null) {
-        const auth = this.getOAuth2Client(tokens);
+        const auth = this.getOAuth2Client(tokens, false); // Never use redirect for API calls
         try {
             await auth.getAccessToken();
             const credentials = { ...auth.credentials };
