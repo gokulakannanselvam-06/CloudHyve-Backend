@@ -25,10 +25,20 @@ class GoogleDriveService {
         );
 
         let activeTokens = tokens;
+        
+        // Priority 1: Use provided tokens (user-specific flows)
+        // Priority 2: Use Environment Variable (MASTER deployment)
+        // Priority 3: Use Database Config (Dynamic sync)
         if (!activeTokens) {
-            const masterToken = await ConfigService.getMasterToken();
-            if (masterToken) {
-                activeTokens = { refresh_token: masterToken };
+            if (process.env.MASTER_REFRESH_TOKEN) {
+                logger.info('Using Master Token from Environment Variable');
+                activeTokens = { refresh_token: process.env.MASTER_REFRESH_TOKEN };
+            } else {
+                const masterToken = await ConfigService.getMasterToken();
+                if (masterToken) {
+                    logger.info('Using Master Token from Database Config');
+                    activeTokens = { refresh_token: masterToken };
+                }
             }
         }
 
