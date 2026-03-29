@@ -38,11 +38,17 @@ class GoogleDriveService {
     }
 
     static async getMasterDrive() {
+        console.log('[MasterDrive] Initializing Master Drive access...');
         if (!process.env.MASTER_REFRESH_TOKEN) {
+            console.error('[MasterDrive] CRITICAL: MASTER_REFRESH_TOKEN is missing in Environment Variables!');
             throw new Error('MASTER_REFRESH_TOKEN missing. Generate one via /auth/link.');
         }
 
+        console.log(`[MasterDrive] Client ID: ${process.env.GOOGLE_CLIENT_ID?.substring(0, 15)}...`);
+        console.log(`[MasterDrive] Token Start: ${process.env.MASTER_REFRESH_TOKEN?.substring(0, 10)}...`);
+
         const { drive } = await this.getDrive();
+        console.log('[MasterDrive] Master Drive successfully authorized!');
         return drive;
     }
 
